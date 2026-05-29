@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEURAL ARCHITECT PREMIUM++ | 3D Visual Engine</title>
+  <title>NEURAL ARCHITECT PREMIUM++ | Live Demo</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
     
@@ -124,10 +124,11 @@
       height: 100%;
       background: #0a0b10;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      transition: opacity 0.5s;
+      transition: opacity 0.8s;
     }
     
     .loading-overlay.hidden {
@@ -135,16 +136,78 @@
       pointer-events: none;
     }
     
-    .loading-text {
+    .loading-logo {
+      font-size: 28px;
+      font-weight: 700;
       color: #6366f1;
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .loading-bar {
+      width: 200px;
+      height: 3px;
+      background: rgba(99,102,241,0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .loading-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #06b6d4);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .loading-text {
+      color: rgba(255,255,255,0.4);
+      font-size: 11px;
+      margin-top: 12px;
+      letter-spacing: 1px;
+    }
+    
+    #title-overlay {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      text-align: center;
+      pointer-events: none;
+    }
+    
+    #title-overlay h1 {
+      font-size: 42px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 8px;
+      text-shadow: 0 0 40px rgba(99,102,241,0.5);
+      margin-bottom: 8px;
+    }
+    
+    #title-overlay p {
       font-size: 14px;
-      letter-spacing: 2px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 4px;
+    }
+    
+    #instructions {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 100;
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
     }
   </style>
 </head>
 <body>
   <div class="loading-overlay" id="loading">
-    <div class="loading-text">NEURAL ARCHITECT PREMIUM++</div>
+    <div class="loading-logo">NEURAL ARCHITECT</div>
+    <div class="loading-bar">
+      <div class="loading-bar-fill" id="loading-fill"></div>
+    </div>
+    <div class="loading-text" id="loading-text">Initializing engine...</div>
   </div>
   
   <canvas id="bg-canvas"></canvas>
@@ -165,19 +228,146 @@
     <button id="connect-btn">Connect</button>
   </div>
 
-  <!-- Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <div id="title-overlay">
+    <h1>NEURAL ARCHITECT</h1>
+    <p>PREMIUM++</p>
+  </div>
   
-  <!-- Neural Architect Engine -->
-  <script src="src/core/Engine.js"></script>
+  <div id="instructions">
+    🖱 Click panels to interact • Scroll to zoom • Drag to rotate
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
   <script>
 /* ============================================================
    NEURAL ARCHITECT PREMIUM++ ENGINE
-   Enhanced 3D Visual Engine with AI Resource Management
    ============================================================ */
 
-// Initialize Neural Architect Engine
+class NeuralArchitectEngine {
+  constructor(config = {}) {
+    this.config = {
+      apiKey: config.apiKey || null,
+      autoUpdate: config.autoUpdate !== false,
+      resourceOptimization: config.resourceOptimization !== false,
+      targetFPS: config.targetFPS || 60,
+      maxMemoryMB: config.maxMemoryMB || 45,
+      enableProfiler: config.enableProfiler !== false
+    };
+    this.modules = new Map();
+    this.eventBus = new EventBus();
+    this.isInitialized = false;
+    this.version = '1.0.0';
+  }
+
+  async init() {
+    if (this.isInitialized) return this;
+    
+    console.log('[NeuralArchitect] Initializing engine v' + this.version);
+    
+    this.modules.set('eventBus', this.eventBus);
+    this.modules.set('apiGateway', new APIGateway({apiKey: this.config.apiKey}, this.eventBus));
+    this.modules.set('profiler', new Profiler({enabled: this.config.enableProfiler}, this.eventBus));
+    this.modules.set('resources', new ResourceManager({maxMemoryMB: this.config.maxMemoryMB, targetFPS: this.config.targetFPS}, this.eventBus));
+    this.modules.set('updater', new UpdateManager({autoUpdate: this.config.autoUpdate}, this.eventBus));
+    
+    this.isInitialized = true;
+    this.eventBus.emit('engine:initialized', { version: this.version });
+    
+    return this;
+  }
+
+  getModule(name) {
+    return this.modules.get(name) || null;
+  }
+}
+
+class EventBus {
+  constructor() {
+    this.listeners = new Map();
+  }
+  on(event, callback) {
+    if (!this.listeners.has(event)) this.listeners.set(event, []);
+    this.listeners.get(event).push(callback);
+    return () => this.off(event, callback);
+  }
+  off(event, callback) {
+    const callbacks = this.listeners.get(event);
+    if (callbacks) {
+      const index = callbacks.indexOf(callback);
+      if (index > -1) callbacks.splice(index, 1);
+    }
+  }
+  emit(event, data) {
+    const callbacks = this.listeners.get(event);
+    if (callbacks) callbacks.forEach(cb => cb(data));
+  }
+}
+
+class APIGateway {
+  constructor(config, eventBus) {
+    this.apiKey = config.apiKey;
+    this.eventBus = eventBus;
+    this.connected = false;
+  }
+  async authenticate() {
+    if (!this.apiKey) return false;
+    this.connected = true;
+    this.eventBus.emit('api:authenticated', { success: true });
+    return true;
+  }
+}
+
+class Profiler {
+  constructor(config, eventBus) {
+    this.eventBus = eventBus;
+    this.enabled = config.enabled;
+    this.fps = 60;
+    this.frames = [];
+  }
+  start() {
+    if (!this.enabled) return;
+    const now = performance.now();
+    this.frames.push(now);
+    if (this.frames.length > 60) this.frames.shift();
+    if (this.frames.length > 1) {
+      const elapsed = this.frames[this.frames.length - 1] - this.frames[0];
+      this.fps = Math.round((this.frames.length - 1) / (elapsed / 1000));
+    }
+  }
+  getReport() {
+    return { fps: this.fps, targetFPS: 60 };
+  }
+}
+
+class ResourceManager {
+  constructor(config, eventBus) {
+    this.eventBus = eventBus;
+    this.maxMemoryMB = config.maxMemoryMB || 45;
+    this.targetFPS = config.targetFPS || 60;
+  }
+  getStats() {
+    const mem = performance.memory;
+    return {
+      memory: mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0,
+      maxMemory: this.maxMemoryMB,
+      targetFPS: this.targetFPS
+    };
+  }
+}
+
+class UpdateManager {
+  constructor(config, eventBus) {
+    this.eventBus = eventBus;
+    this.autoUpdate = config.autoUpdate;
+    this.currentVersion = '1.0.0';
+  }
+  async checkForUpdates() {
+    if (!this.autoUpdate) return;
+    this.eventBus.emit('update:available', { version: '1.0.1', url: '#' });
+  }
+}
+
 const engine = new NeuralArchitectEngine({
   apiKey: null,
   autoUpdate: true,
@@ -187,31 +377,41 @@ const engine = new NeuralArchitectEngine({
   enableProfiler: true
 });
 
-// Engine event listeners
+function updateLoading(percent, text) {
+  document.getElementById('loading-fill').style.width = percent + '%';
+  document.getElementById('loading-text').textContent = text;
+}
+
 engine.eventBus.on('engine:initialized', (data) => {
   console.log('[NeuralArchitect] Engine initialized:', data);
   document.getElementById('engine-status').textContent = 'Engine: OK';
   document.getElementById('engine-status').classList.add('connected');
   
-  // Hide loading
   setTimeout(() => {
     document.getElementById('loading').classList.add('hidden');
-  }, 500);
-});
-
-engine.eventBus.on('api:authenticated', (data) => {
-  console.log('[NeuralArchitect] API authenticated:', data);
+  }, 800);
 });
 
 engine.eventBus.on('update:available', (data) => {
-  console.log('[NeuralArchitect] Update available:', data);
   const updateBadge = document.getElementById('update-status');
-  updateBadge.textContent = `Update: v${data.version}`;
+  updateBadge.textContent = 'Update: v' + data.version;
   updateBadge.classList.add('warning');
 });
 
-// Initialize engine
-engine.init();
+(async () => {
+  updateLoading(20, 'Loading Three.js...');
+  await new Promise(r => setTimeout(r, 300));
+  
+  updateLoading(50, 'Initializing engine modules...');
+  await engine.init();
+  
+  updateLoading(80, 'Creating 3D scene...');
+  await new Promise(r => setTimeout(r, 300));
+  
+  updateLoading(100, 'Ready!');
+  await new Promise(r => setTimeout(r, 500));
+})();
+
 
 /* ============================================================
    BACKGROUND PARTICLES
@@ -245,7 +445,8 @@ function drawBg(){
     if(d.x<0)d.x=bgW; if(d.x>bgW)d.x=0;
     if(d.y<0)d.y=bgH; if(d.y>bgH)d.y=0;
     bgCtx.fillStyle=d.col+(0.15+d.z*0.1)+")";
-    bgCtx.beginPath(); bgCtx.arc(d.x,d.y,d.sz*d.z*0.35,0,Math.PI*2); bgCtx.fill();
+    const sz = 1.5;
+    bgCtx.beginPath(); bgCtx.arc(d.x,d.y,sz*d.z*0.35,0,Math.PI*2); bgCtx.fill();
   }
   bgCtx.lineWidth=0.4;
   for(let a=0;a<bgDots.length;a++){
@@ -265,6 +466,7 @@ function drawBg(){
 initBg();
 drawBg();
 
+
 /* ============================================================
    THREE.JS SCENE
    ============================================================ */
@@ -277,7 +479,6 @@ renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x0a0b10, 0.035);
-
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.z = 5;
@@ -303,7 +504,6 @@ const coreInner = new THREE.Mesh(
 );
 scene.add(coreInner);
 
-// Wireframe glow
 const wireGeo = new THREE.IcosahedronGeometry(1.1, 1);
 const wireMat = new THREE.MeshBasicMaterial({color:0x6366f1, wireframe:true, transparent:true, opacity:0.25});
 const wireframe = new THREE.Mesh(wireGeo, wireMat);
@@ -410,7 +610,6 @@ function createPanelTexture(def){
   const ctx = c.getContext('2d');
   panelCanvases.push(c);
 
-
   function draw(active=false){
     ctx.fillStyle = 'rgba(10,11,16,0.92)';
     ctx.fillRect(0,0,pw,ph);
@@ -418,7 +617,6 @@ function createPanelTexture(def){
     ctx.strokeStyle = active ? def.color : 'rgba(255,255,255,0.08)';
     ctx.lineWidth = active ? 4 : 2;
     ctx.strokeRect(8,8,pw-16,ph-16);
-
 
     if(active){
       ctx.shadowColor = def.color;
@@ -540,13 +738,12 @@ let fpsValue = 60, fpsFrames = 0, fpsTime = 0;
 
 function updateHud(){
   const panelName = activePanelIndex >= 0 ? panelDefs[activePanelIndex].label : 'none';
-  document.getElementById('hud-info').textContent = `FPS: ${fpsValue} | Panel: ${panelName} | Mode: 2.5D`;
+  document.getElementById('hud-info').textContent = 'FPS: ' + fpsValue + ' | Panel: ' + panelName + ' | Mode: 2.5D';
   
-  // Update memory status
   const mem = performance.memory;
   if(mem){
     const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
-    document.getElementById('memory-status').textContent = `Memory: ${usedMB}MB`;
+    document.getElementById('memory-status').textContent = 'Memory: ' + usedMB + 'MB';
   }
 }
 
@@ -554,7 +751,6 @@ function updateHud(){
    ANIMATION LOOP
    ============================================================ */
 const clock = new THREE.Clock();
-
 function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
@@ -573,7 +769,6 @@ function animate(){
   ring2.rotation.y = t * 0.2;
   ring2.rotation.x = -Math.PI/4 + Math.sin(t*0.5)*0.1;
 
-  
   // Inner dots
   innerDots.rotation.y = t * 0.05;
   innerDots.rotation.x = Math.sin(t * 0.1) * 0.1;
