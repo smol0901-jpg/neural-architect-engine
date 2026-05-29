@@ -237,11 +237,12 @@
     🖱 Click panels to interact • Scroll to zoom • Drag to rotate
   </div>
 
+  <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
   <script>
 /* ============================================================
-   NEURAL ARCHITECT PREMIUM++ ENGINE
+   NEURAL ARCHITECT PREMIUM++ ENGINE (Inline Version)
    ============================================================ */
 
 class NeuralArchitectEngine {
@@ -368,6 +369,7 @@ class UpdateManager {
   }
 }
 
+// Initialize engine
 const engine = new NeuralArchitectEngine({
   apiKey: null,
   autoUpdate: true,
@@ -377,11 +379,13 @@ const engine = new NeuralArchitectEngine({
   enableProfiler: true
 });
 
+// Loading simulation
 function updateLoading(percent, text) {
   document.getElementById('loading-fill').style.width = percent + '%';
   document.getElementById('loading-text').textContent = text;
 }
 
+// Engine events
 engine.eventBus.on('engine:initialized', (data) => {
   console.log('[NeuralArchitect] Engine initialized:', data);
   document.getElementById('engine-status').textContent = 'Engine: OK';
@@ -394,10 +398,11 @@ engine.eventBus.on('engine:initialized', (data) => {
 
 engine.eventBus.on('update:available', (data) => {
   const updateBadge = document.getElementById('update-status');
-  updateBadge.textContent = 'Update: v' + data.version;
+  updateBadge.textContent = `Update: v${data.version}`;
   updateBadge.classList.add('warning');
 });
 
+// Initialize
 (async () => {
   updateLoading(20, 'Loading Three.js...');
   await new Promise(r => setTimeout(r, 300));
@@ -445,8 +450,7 @@ function drawBg(){
     if(d.x<0)d.x=bgW; if(d.x>bgW)d.x=0;
     if(d.y<0)d.y=bgH; if(d.y>bgH)d.y=0;
     bgCtx.fillStyle=d.col+(0.15+d.z*0.1)+")";
-    const sz = 1.5;
-    bgCtx.beginPath(); bgCtx.arc(d.x,d.y,sz*d.z*0.35,0,Math.PI*2); bgCtx.fill();
+    bgCtx.beginPath(); bgCtx.arc(d.x,d.y,d.sz*d.z*0.35,0,Math.PI*2); bgCtx.fill();
   }
   bgCtx.lineWidth=0.4;
   for(let a=0;a<bgDots.length;a++){
@@ -508,6 +512,7 @@ const wireGeo = new THREE.IcosahedronGeometry(1.1, 1);
 const wireMat = new THREE.MeshBasicMaterial({color:0x6366f1, wireframe:true, transparent:true, opacity:0.25});
 const wireframe = new THREE.Mesh(wireGeo, wireMat);
 scene.add(wireframe);
+
 
 /* ============================================================
    ORBITING RINGS
@@ -614,9 +619,11 @@ function createPanelTexture(def){
     ctx.fillStyle = 'rgba(10,11,16,0.92)';
     ctx.fillRect(0,0,pw,ph);
 
+
     ctx.strokeStyle = active ? def.color : 'rgba(255,255,255,0.08)';
     ctx.lineWidth = active ? 4 : 2;
     ctx.strokeRect(8,8,pw-16,ph-16);
+
 
     if(active){
       ctx.shadowColor = def.color;
@@ -731,6 +738,7 @@ function onClick(e){
 window.addEventListener('mousemove', onMouseMove);
 window.addEventListener('click', onClick);
 
+
 /* ============================================================
    HUD UPDATE
    ============================================================ */
@@ -738,12 +746,12 @@ let fpsValue = 60, fpsFrames = 0, fpsTime = 0;
 
 function updateHud(){
   const panelName = activePanelIndex >= 0 ? panelDefs[activePanelIndex].label : 'none';
-  document.getElementById('hud-info').textContent = 'FPS: ' + fpsValue + ' | Panel: ' + panelName + ' | Mode: 2.5D';
+  document.getElementById('hud-info').textContent = `FPS: ${fpsValue} | Panel: ${panelName} | Mode: 2.5D`;
   
   const mem = performance.memory;
   if(mem){
     const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
-    document.getElementById('memory-status').textContent = 'Memory: ' + usedMB + 'MB';
+    document.getElementById('memory-status').textContent = `Memory: ${usedMB}MB`;
   }
 }
 
@@ -768,6 +776,7 @@ function animate(){
   ring.rotation.z = t * 0.3;
   ring2.rotation.y = t * 0.2;
   ring2.rotation.x = -Math.PI/4 + Math.sin(t*0.5)*0.1;
+
 
   // Inner dots
   innerDots.rotation.y = t * 0.05;
@@ -804,6 +813,7 @@ function animate(){
   
   renderer.render(scene, camera);
 }
+
 
 animate();
 
