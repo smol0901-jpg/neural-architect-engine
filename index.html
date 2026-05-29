@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEURAL ARCHITECT PREMIUM++ | 3D Visual Engine</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: #0a0b10;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    #main-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+    
+    #hud {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: none;
+    }
+    
+    #hud-info {
+      background: rgba(10,11,16,0.8);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(99,102,241,0.3);
+    }
+    
+    #api-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .status-badge {
+      background: rgba(10,11,16,0.8);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      border: 1px solid rgba(99,102,241,0.3);
+    }
+    
+    .status-badge.connected {
+      border-color: rgba(16,185,129,0.5);
+      color: #10b981;
+    }
+    
+    .status-badge.warning {
+      border-color: rgba(245,158,11,0.5);
+      color: #f59e0b;
+    }
+    
+    #api-key-input {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      z-index: 100;
+      background: rgba(10,11,16,0.9);
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(99,102,241,0.3);
+    }
+    
+    #api-key-input input {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #e4e4e7;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      width: 200px;
+      font-family: monospace;
+    }
+    
+    #api-key-input button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    
+    #api-key-input button:hover {
+      background: #4f46e5;
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0a0b10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.5s;
+    }
+    
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loading-text {
+      color: #6366f1;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loading">
+    <div class="loading-text">NEURAL ARCHITECT PREMIUM++</div>
+  </div>
+  
+  <canvas id="bg-canvas"></canvas>
+  <canvas id="main-canvas"></canvas>
+  
+  <div id="hud">
+    <div id="hud-info">FPS: -- | Panel: none | Mode: 2.5D</div>
+  </div>
+  
+  <div id="api-status">
+    <div class="status-badge" id="engine-status">Engine: --</div>
+    <div class="status-badge" id="memory-status">Memory: --</div>
+    <div class="status-badge" id="update-status">Update: --</div>
+  </div>
+  
+  <div id="api-key-input">
+    <input type="password" id="api-key" placeholder="API Key (optional)">
+    <button id="connect-btn">Connect</button>
+  </div>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- Neural Architect Engine -->
+  <script src="src/core/Engine.js"></script>
+  
+  <script>
+/* ============================================================
+   NEURAL ARCHITECT PREMIUM++ ENGINE
+   Enhanced 3D Visual Engine with AI Resource Management
+   ============================================================ */
+
+// Initialize Neural Architect Engine
+const engine = new NeuralArchitectEngine({
+  apiKey: null,
+  autoUpdate: true,
+  resourceOptimization: true,
+  targetFPS: 60,
+  maxMemoryMB: 45,
+  enableProfiler: true
+});
+
+// Engine event listeners
+engine.eventBus.on('engine:initialized', (data) => {
+  console.log('[NeuralArchitect] Engine initialized:', data);
+  document.getElementById('engine-status').textContent = 'Engine: OK';
+  document.getElementById('engine-status').classList.add('connected');
+  
+  // Hide loading
+  setTimeout(() => {
+    document.getElementById('loading').classList.add('hidden');
+  }, 500);
+});
+
+engine.eventBus.on('api:authenticated', (data) => {
+  console.log('[NeuralArchitect] API authenticated:', data);
+});
+
+engine.eventBus.on('update:available', (data) => {
+  console.log('[NeuralArchitect] Update available:', data);
+  const updateBadge = document.getElementById('update-status');
+  updateBadge.textContent = `Update: v${data.version}`;
+  updateBadge.classList.add('warning');
+});
+
+// Initialize engine
+engine.init();
+
+/* ============================================================
+   BACKGROUND PARTICLES
+   ============================================================ */
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let bgW, bgH, bgDots = [], bgMx = 0, bgMy = 0;
+
+function initBg(){
+  bgW = bgCanvas.width = window.innerWidth;
+  bgH = bgCanvas.height = window.innerHeight;
+  bgDots = [];
+  const count = Math.floor((bgW * bgH) / 8000);
+  for(let i=0;i<count;i++){
+    bgDots.push({
+      x: Math.random()*bgW,
+      y: Math.random()*bgH,
+      z: Math.random()*2+0.5,
+      vx: (Math.random()-0.5)*0.3,
+      vy: (Math.random()-0.5)*0.3,
+      col: ['rgba(99,102,241','rgba(6,182,212','rgba(245,158,11','rgba(16,185,129','rgba(236,72,153'][Math.floor(Math.random()*5)]
+    });
+  }
+}
+
+function drawBg(){
+  bgCtx.clearRect(0,0,bgW,bgH);
+  const px=(bgMx-bgW/2)*0.01, py=(bgMy-bgH/2)*0.01;
+  for(const d of bgDots){
+    d.x+=d.vx+px*d.z*0.06; d.y+=d.vy+py*d.z*0.06;
+    if(d.x<0)d.x=bgW; if(d.x>bgW)d.x=0;
+    if(d.y<0)d.y=bgH; if(d.y>bgH)d.y=0;
+    bgCtx.fillStyle=d.col+(0.15+d.z*0.1)+")";
+    bgCtx.beginPath(); bgCtx.arc(d.x,d.y,d.sz*d.z*0.35,0,Math.PI*2); bgCtx.fill();
+  }
+  bgCtx.lineWidth=0.4;
+  for(let a=0;a<bgDots.length;a++){
+    for(let b=a+1;b<bgDots.length;b++){
+      const dx=bgDots[a].x-bgDots[b].x, dy=bgDots[a].y-bgDots[b].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<90){
+        bgCtx.strokeStyle="rgba(99,102,241,"+(0.06*(1-dist/90))+")";
+        bgCtx.beginPath(); bgCtx.moveTo(bgDots[a].x,bgDots[a].y);
+        bgCtx.lineTo(bgDots[b].x,bgDots[b].y); bgCtx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawBg);
+}
+
+initBg();
+drawBg();
+
+/* ============================================================
+   THREE.JS SCENE
+   ============================================================ */
+const canvas = document.getElementById('main-canvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0b10, 0.035);
+
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 5;
+
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.rotateSpeed = 0.5;
+
+/* ============================================================
+   CORE SPHERE
+   ============================================================ */
+const coreGeo = new THREE.IcosahedronGeometry(1, 2);
+const coreMat = new THREE.MeshBasicMaterial({color:0x6366f1, wireframe:true, transparent:true, opacity:0.8});
+const coreSphere = new THREE.Mesh(coreGeo, coreMat);
+scene.add(coreSphere);
+
+const coreInner = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(0.7, 1),
+  new THREE.MeshBasicMaterial({color:0x06b6d4, transparent:true, opacity:0.4})
+);
+scene.add(coreInner);
+
+// Wireframe glow
+const wireGeo = new THREE.IcosahedronGeometry(1.1, 1);
+const wireMat = new THREE.MeshBasicMaterial({color:0x6366f1, wireframe:true, transparent:true, opacity:0.25});
+const wireframe = new THREE.Mesh(wireGeo, wireMat);
+scene.add(wireframe);
+
+/* ============================================================
+   ORBITING RINGS
+   ============================================================ */
+const ringGeo = new THREE.TorusGeometry(0.6, 0.015, 8, 64);
+const ringMat = new THREE.MeshBasicMaterial({color:0x06b6d4, transparent:true, opacity:0.6});
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.rotation.x = Math.PI / 3;
+scene.add(ring);
+
+const ring2 = new THREE.Mesh(
+  new THREE.TorusGeometry(0.8, 0.01, 8, 64),
+  new THREE.MeshBasicMaterial({color:0xa855f7, transparent:true, opacity:0.3})
+);
+ring2.rotation.x = -Math.PI / 4;
+ring2.rotation.z = Math.PI / 6;
+scene.add(ring2);
+
+/* ============================================================
+   INNER PARTICLES
+   ============================================================ */
+const innerDotCount = 200;
+const innerGeo = new THREE.BufferGeometry();
+const innerPos = new Float32Array(innerDotCount * 3);
+const innerCol = new Float32Array(innerDotCount * 3);
+for(let i=0;i<innerDotCount;i++){
+  innerPos[i*3] = (Math.random()-0.5)*4;
+  innerPos[i*3+1] = (Math.random()-0.5)*4;
+  innerPos[i*3+2] = (Math.random()-0.5)*4;
+  const c = new THREE.Color([0x6366f1,0x06b6d4,0xf59e0b,0x10b981,0xec4899][Math.floor(Math.random()*5)]);
+  innerCol[i*3]=c.r; innerCol[i*3+1]=c.g; innerCol[i*3+2]=c.b;
+}
+innerGeo.setAttribute('position', new THREE.BufferAttribute(innerPos,3));
+innerGeo.setAttribute('color', new THREE.BufferAttribute(innerCol,3));
+const innerMat = new THREE.PointsMaterial({size:0.03, vertexColors:true, transparent:true, opacity:0.7, sizeAttenuation:true});
+const innerDots = new THREE.Points(innerGeo, innerMat);
+scene.add(innerDots);
+
+/* ============================================================
+   CORNER GLOWING DOTS
+   ============================================================ */
+const half = 2.5;
+const cornerGeo = new THREE.SphereGeometry(0.06, 8, 8);
+const cornerMat = new THREE.MeshBasicMaterial({color:0x6366f1});
+const corners = [];
+for(let x=-1;x<=1;x+=2) for(let y=-1;y<=1;y+=2) for(let z=-1;z<=1;z+=2){
+  const s = new THREE.Mesh(cornerGeo, cornerMat.clone());
+  s.position.set(x*half, y*half, z*half);
+  scene.add(s);
+  corners.push(s);
+}
+
+/* ============================================================
+   PANEL DATA
+   ============================================================ */
+const panelDefs = [
+  {
+    id:'core', label:'NEURAL_ARCHITECT', sub:'PREMIUM++ Core',
+    desc:'Ядро движка параллакса. Рассчитывает смещение слоёв по формуле ΔP = (I−C)⊗Dz⊗S⊗E(t)⊗Φ(ω)',
+    stats:[['Режим','2.5D / True 3D'],['Формула','ΔP базовая'],['Слоёв','5'],['Easing','cubic-bezier']],
+    color:'#6366f1', color2:'#06b6d4', face:'front'
+  },
+  {
+    id:'arch', label:'АРХИТЕКТУРА', sub:'Layered Pipeline',
+    desc:'6-слойная data-driven архитектура: API Gateway → Input Router → Parallax Core → Math Solver → Renderer → Profiler',
+    stats:[['Модулей','6'],['Связь','Event Bus'],['Аллокации','Zero'],['Dirty Flags','Да']],
+    color:'#f59e0b', color2:'#10b981', face:'back'
+  },
+  {
+    id:'roles', label:'5 РОЛЕЙ', sub:'Expert Modules',
+    desc:'Архитектор логики, Инженер механики, Математик проекций, Физик взаимодействий, Алгоритмист оптимизации',
+    stats:[['Ролей','5'],['Cross-sync','Typed Arrays'],['Валидация','Σ(M×W)≥0.85']],
+    color:'#ec4899', color2:'#a855f7', face:'left'
+  },
+  {
+    id:'metrics', label:'МЕТРИКИ', sub:'Quality Targets',
+    desc:'FPS≥60, InputLag≤8ms, DrawCalls≤15, Memory≤45MB, MatrixDrift≤0.005, SyncRecovery≤200ms',
+    stats:[['FPS','≥60'],['Input Lag','≤8ms'],['Draw Calls','≤15'],['Memory','≤45MB']],
+    color:'#10b981', color2:'#06b6d4', face:'right'
+  },
+  {
+    id:'protocol', label:'ПРОТОКОЛ', sub:'Communication',
+    desc:'Event-driven архитектура с синхронизацией модулей. API Gateway для внешних подключений.',
+    stats:[['Протокол','Event Bus'],['API','REST/GraphQL'],['Sync','WebSocket'],['Auth','OAuth2']],
+    color:'#06b6d4', color2:'#6366f1', face:'top'
+  }
+];
+
+/* ============================================================
+   PANEL TEXTURES
+   ============================================================ */
+const panelTextures = [];
+const panelMeshes = [];
+const panelCanvases = []
+const pw = 1024, ph = 600;
+
+function createPanelTexture(def){
+  const c = document.createElement('canvas');
+  c.width = pw; c.height = ph;
+  const ctx = c.getContext('2d');
+  panelCanvases.push(c);
+
+
+  function draw(active=false){
+    ctx.fillStyle = 'rgba(10,11,16,0.92)';
+    ctx.fillRect(0,0,pw,ph);
+
+    ctx.strokeStyle = active ? def.color : 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = active ? 4 : 2;
+    ctx.strokeRect(8,8,pw-16,ph-16);
+
+
+    if(active){
+      ctx.shadowColor = def.color;
+      ctx.shadowBlur = 20;
+      ctx.strokeRect(8,8,pw-16,ph-16);
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.fillStyle = def.color;
+    ctx.fillRect(24, 60, pw-48, 2);
+
+    ctx.fillStyle = '#e4e4e7';
+    ctx.font = 'bold 36px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(def.label, pw/2, 50);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '18px Inter, sans-serif';
+    ctx.fillText(def.sub, pw/2, 90);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '22px Inter, sans-serif';
+    const words = def.desc.split(' ');
+    let line = '', lines = [];
+    for(const w of words){
+      if((line+w).length>45){lines.push(line);line=w+' ';}else{line+=w+' '}
+    }
+    lines.push(line);
+    lines.forEach((l,i)=>ctx.fillText(l, pw/2, 150+i*30));
+
+    ctx.fillStyle = def.color2;
+    ctx.font = 'bold 16px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    def.stats.forEach((s,i)=>{
+      ctx.fillText(s[0]+':', 60, 350+i*40);
+      ctx.fillStyle = '#e4e4e7';
+      ctx.fillText(s[1], 200, 350+i*40);
+      ctx.fillStyle = def.color2;
+    });
+  }
+
+  draw(false);
+  const tex = new THREE.CanvasTexture(c);
+  panelTextures.push(tex);
+  return {tex, draw, c};
+}
+
+/* ============================================================
+   PANEL MESHES
+   ============================================================ */
+const panelDist = 3;
+panelDefs.forEach((def, i) => {
+  const {tex, draw, c} = createPanelTexture(def);
+  const geo = new THREE.PlaneGeometry(2.4, 1.4);
+  const mat = new THREE.MeshBasicMaterial({map:tex, transparent:true, side:THREE.DoubleSide});
+  const mesh = new THREE.Mesh(geo, mat);
+  
+  const angle = (i / panelDefs.length) * Math.PI * 2;
+  mesh.position.set(Math.cos(angle)*panelDist, 0, Math.sin(angle)*panelDist);
+  mesh.lookAt(0,0,0);
+  
+  mesh.userData = {def, draw, c, index:i};
+  scene.add(mesh);
+  panelMeshes.push(mesh);
+});
+
+/* ============================================================
+   RAYCASTER / INTERACTION
+   ============================================================ */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let hoveredPanel = -1;
+let activePanelIndex = -1;
+
+function onMouseMove(e){
+  mouse.x = (e.clientX/window.innerWidth)*2-1;
+  mouse.y = -(e.clientY/window.innerHeight)*2+1;
+  bgMx = e.clientX; bgMy = e.clientY;
+  
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(panelMeshes);
+  
+  if(hits.length>0){
+    const idx = hits[0].object.userData.index;
+    if(idx!==hoveredPanel){
+      hoveredPanel = idx;
+      document.body.style.cursor = 'pointer';
+    }
+  }else{
+    if(hoveredPanel!==-1){
+      hoveredPanel = -1;
+      document.body.style.cursor = 'default';
+    }
+  }
+}
+
+function onClick(e){
+  if(hoveredPanel!==-1 && hoveredPanel!==activePanelIndex){
+    activePanelIndex = hoveredPanel;
+    
+    panelMeshes.forEach((m, i)=>{
+      m.userData.draw(i===activePanelIndex);
+      m.userData.tex.needsUpdate = true;
+    });
+    
+    engine.eventBus.emit('panel:selected', { 
+      panel: panelDefs[activePanelIndex].id 
+    });
+  }
+}
+
+window.addEventListener('mousemove', onMouseMove);
+window.addEventListener('click', onClick);
+
+/* ============================================================
+   HUD UPDATE
+   ============================================================ */
+let fpsValue = 60, fpsFrames = 0, fpsTime = 0;
+
+function updateHud(){
+  const panelName = activePanelIndex >= 0 ? panelDefs[activePanelIndex].label : 'none';
+  document.getElementById('hud-info').textContent = `FPS: ${fpsValue} | Panel: ${panelName} | Mode: 2.5D`;
+  
+  // Update memory status
+  const mem = performance.memory;
+  if(mem){
+    const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+    document.getElementById('memory-status').textContent = `Memory: ${usedMB}MB`;
+  }
+}
+
+/* ============================================================
+   ANIMATION LOOP
+   ============================================================ */
+const clock = new THREE.Clock();
+
+function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  controls.update();
+
+  // Core sphere animation
+  coreSphere.rotation.x = t * 0.5;
+  coreSphere.rotation.y = t * 0.7;
+  const pulse = 1 + Math.sin(t * 2) * 0.1;
+  coreSphere.scale.set(pulse, pulse, pulse);
+  coreInner.rotation.y = -t * 0.3;
+  
+  // Rings
+  ring.rotation.z = t * 0.3;
+  ring2.rotation.y = t * 0.2;
+  ring2.rotation.x = -Math.PI/4 + Math.sin(t*0.5)*0.1;
+
+  
+  // Inner dots
+  innerDots.rotation.y = t * 0.05;
+  innerDots.rotation.x = Math.sin(t * 0.1) * 0.1;
+  
+  // Wireframe glow
+  wireMat.opacity = 0.25 + Math.sin(t * 1.5) * 0.1;
+  
+  // Corner dots
+  for(const c of corners){
+    const s = 1 + Math.sin(t * 2 + c.position.x) * 0.3;
+    c.scale.set(s,s,s);
+  }
+  
+  // FPS tracking
+  fpsFrames++;
+  const now = performance.now();
+  if(now - fpsTime >= 1000){
+    fpsValue = fpsFrames;
+    fpsFrames = 0;
+    fpsTime = now;
+    updateHud();
+  }
+  
+  // Highlight hovered panel
+  for(let i=0;i<panelMeshes.length;i++){
+    const m = panelMeshes[i];
+    if(i === hoveredPanel && i !== activePanelIndex){
+      m.material.opacity = 0.95;
+    } else if(i !== activePanelIndex) {
+      m.material.opacity = 0.85;
+    }
+  }
+  
+  renderer.render(scene, camera);
+}
+
+animate();
+
+
+/* ============================================================
+   RESIZE HANDLER
+   ============================================================ */
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  initBg();
+});
+
+/* ============================================================
+   API KEY HANDLER
+   ============================================================ */
+document.getElementById('connect-btn').addEventListener('click', () => {
+  const apiKey = document.getElementById('api-key').value;
+  if(apiKey){
+    engine.config.apiKey = apiKey;
+    const apiGateway = engine.getModule('apiGateway');
+    if(apiGateway){
+      apiGateway.authenticate().then(success => {
+        if(success){
+          document.getElementById('engine-status').textContent = 'API: Connected';
+          document.getElementById('engine-status').classList.add('connected');
+        }
+      });
+    }
+  }
+});
+  </script>
+</body>
+</html>
