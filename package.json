@@ -1,0 +1,27 @@
+{
+  "name": "neural-architect-engine",
+  "version": "1.0.0",
+  "description": "3D Visual Engine with AI Resource Management - NEURAL_ARCHITECT_PREMIUM++ Core System",
+  "main": "src/core/Engine.js",
+  "scripts": {
+    "start": "open index.html",
+    "dev": "npx serve ."
+  },
+  "keywords": [
+    "3d",
+    "visual-engine",
+    "parallax",
+    "threejs",
+    "webgl",
+    "neural-architect"
+  ],
+  "author": "Neural Architect Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smol0901-jpg/neural-architect-engine.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
